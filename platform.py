@@ -14,6 +14,7 @@
 
 import os
 import sys
+import subprocess
 from platformio.public import PlatformBase
 
 IS_WINDOWS = sys.platform.startswith("win")
@@ -52,6 +53,15 @@ class Ch32vPlatform(PlatformBase):
             self.packages["toolchain-riscv"]["version"] = "https://github.com/Community-PIO-CH32V/toolchain-riscv-windows.git%s" % gcc_branch
         if not variables.get("board"):
             return super().configure_default_packages(variables, targets)
+        
+        if "zephyr" in variables.get("pioframework", []):
+            for p in self.packages:
+                if p in ("tool-cmake", "tool-dtc", "tool-ninja"):
+                    self.packages[p]["optional"] = False
+            # self.packages["toolchain-gccarmnoneeabi"]["version"] = "~1.120301.0"
+            if not IS_WINDOWS:
+                self.packages["tool-gperf"]["optional"] = False
+
         # The FreeRTOS, Harmony LiteOS and RT-Thread package needs the 
         # NoneSDK as a base package
         if any([framework in selected_frameworks for framework in ("freertos", "harmony-liteos", "rt-thread", "tencent-os")]):
@@ -191,3 +201,21 @@ class Ch32vPlatform(PlatformBase):
                 debug_config.server["arguments"].extend(
                     ["-c", "adapter speed %s" % debug_config.speed]
                 )
+
+    def install_package(self, name, *args, **kwargs):
+        pkg = super().install_package(name, *args, **kwargs)
+        if name != "framework-zephyr":
+            return pkg
+
+        if not os.path.isfile(os.path.join(pkg.path, "_pio", "state.json")):
+            self.pm.log.info("Installing Zephyr project dependencies...")
+            try:
+                subprocess.run([
+                    os.path.normpath(sys.executable),
+                    os.path.join(pkg.path, "scripts", "platformio", "install-deps.py"),
+                    "--platform", self.name
+                ])
+            except subprocess.CalledProcessError:
+                self.pm.log.info("Failed to install Zephyr dependencies!")
+
+        return pkg

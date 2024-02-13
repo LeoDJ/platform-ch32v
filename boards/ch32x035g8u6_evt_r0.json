@@ -33,6 +33,7 @@
     "harmony-liteos",
     "rt-thread",
     "tencent-os",
+    "zephyr",
     "arduino"
   ],
   "name": "CH32X035G8U6-EVT-R0",

@@ -15,6 +15,7 @@
 import sys
 import os
 from typing import List
+from os.path import join
 
 from SCons.Script import (
     ARGUMENTS,
@@ -75,6 +76,14 @@ env.Append(
 
 if not env.get("PIOFRAMEWORK"):
     env.SConscript("frameworks/_bare.py", exports="env")
+else:
+    frameworks = env.get("PIOFRAMEWORK", [])
+    if "zephyr" in frameworks:
+        env.SConscript(
+            join(platform.get_package_dir(
+                "framework-zephyr"), "scripts", "platformio", "platformio-build-pre.py"),
+            exports={"env": env}
+        )
 
 #
 # Target: Build executable and linkable firmware
@@ -87,6 +96,11 @@ if "nobuild" in COMMAND_LINE_TARGETS:
 else:
     target_elf = env.BuildProgram()
     target_bin = env.ElfToBin(os.path.join("$BUILD_DIR", "${PROGNAME}"), target_elf)
+
+    if "zephyr" in frameworks and "mcuboot-image" in COMMAND_LINE_TARGETS:
+        target_firm = env.MCUbootImage(
+            join("$BUILD_DIR", "${PROGNAME}.mcuboot.bin"), target_firm)
+
     env.Depends(target_bin, "checkprogsize")
 
 AlwaysBuild(env.Alias("nobuild", target_bin))

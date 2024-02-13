@@ -25,7 +25,8 @@
     "freertos",
     "harmony-liteos",
     "rt-thread",
-    "tencent-os"
+    "tencent-os",
+    "zephyr"
   ],
   "name": "CH32X035F8U6-EVT-R0",
   "upload": {
